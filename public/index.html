@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Same privacy guarantee as the editors: no network egress, period. -->
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'none'; base-uri 'self'; form-action 'none'; object-src 'none'; frame-ancestors 'none'">
+<title>Vault — provable, browser-only PDF editing</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    background: #0f1115; color: #e7e9ee; padding: 2.5rem 1.25rem; display: flex; justify-content: center;
+  }
+  main { width: 100%; max-width: 720px; }
+  h1 { font-size: 1.8rem; margin: 0 0 .25rem; letter-spacing: -.01em; }
+  .tag { color: #9aa3b2; margin: 0 0 1.75rem; }
+  .promise { background: #161a22; border: 1px solid #232a36; border-radius: 12px; padding: 1rem 1.15rem; margin-bottom: 1.75rem; }
+  .promise strong { color: #6ee7a8; }
+  .builds { display: grid; gap: .75rem; }
+  .build {
+    display: block; text-decoration: none; color: inherit;
+    background: #161a22; border: 1px solid #232a36; border-radius: 12px; padding: 1rem 1.15rem;
+  }
+  .build:hover { border-color: #36506f; }
+  .build .name { font-weight: 600; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .build .meta { color: #9aa3b2; font-size: .92rem; margin-top: .2rem; }
+  .pill { display: inline-block; font-size: .74rem; padding: .1rem .5rem; border-radius: 999px; vertical-align: middle; margin-left: .4rem; }
+  .ok  { background: #143726; color: #6ee7a8; }
+  .warn { background: #3a2f12; color: #f3c969; }
+  footer { color: #9aa3b2; font-size: .9rem; margin-top: 1.75rem; }
+  a.inline { color: #8ab4f8; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Vault</h1>
+  <p class="tag">A PDF editor that runs entirely in your browser. Your file never leaves your device — and you can prove it.</p>
+
+  <div class="promise">
+    Every build ships <strong>connect-src 'none'</strong>: your browser refuses
+    every upload attempt this page could make. The protection is the browser's,
+    not a promise in the code. Open any editor offline to confirm.
+  </div>
+
+  <div class="builds">
+    <a class="build" href="pdf-editor-lean.html">
+      <span class="name">pdf-editor-lean.html</span><span class="pill ok">works · recommended</span>
+      <div class="meta">Everyday editing, markup, true redaction, page ops. Smallest file, fully offline. Start here.</div>
+    </a>
+    <a class="build" href="pdf-editor-ocr-full.html">
+      <span class="name">pdf-editor-ocr-full.html</span><span class="pill warn">OCR not working yet</span>
+      <div class="meta">Editing works. OCR is incomplete — the recognition engine's WebAssembly core isn't bundled, so it's blocked by the privacy policy. See the audit.</div>
+    </a>
+    <a class="build" href="pdf-editor-ocr-fast.html">
+      <span class="name">pdf-editor-ocr-fast.html</span><span class="pill warn">OCR not working yet</span>
+      <div class="meta">Editing works. OCR is incomplete — none of the OCR engine is bundled. See the audit.</div>
+    </a>
+  </div>
+
+  <footer>
+    Verify everything: each editor has a <strong>Verify privacy</strong> panel,
+    works offline, and is hashed in <span style="font-family:ui-monospace,monospace">SHA256SUMS.txt</span>.
+    Why the OCR builds are labeled honestly rather than shipped as-if-working: see the audit note in the repo.
+  </footer>
+</main>
+</body>
+</html>
