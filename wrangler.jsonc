@@ -1,0 +1,19 @@
+{
+  // Cloudflare Workers configuration for Vault.
+  // Docs: https://developers.cloudflare.com/workers/wrangler/configuration/
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "vault-pdf-editor",
+  "main": "src/index.js",
+  "compatibility_date": "2025-01-01",
+  "assets": {
+    // The editor HTML files are served from here. The Worker (main, above) runs
+    // to stamp security headers on every response.
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    // No analytics on user content. This only governs Worker runtime logs,
+    // which never contain a user's PDF (the PDF never reaches the Worker).
+    "enabled": false
+  }
+}
