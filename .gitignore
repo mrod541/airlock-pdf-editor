@@ -4,3 +4,5 @@ dist/
 *.log
 .dev.vars
 .DS_Store
+
+_archive/
