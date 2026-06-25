@@ -1,8 +1,8 @@
 {
-  // Cloudflare Workers configuration for Vault.
+  // Cloudflare Workers configuration for AirLock.
   // Docs: https://developers.cloudflare.com/workers/wrangler/configuration/
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "vault-pdf-editor",
+  "name": "airlock-pdf-editor",
   "main": "src/index.js",
   "compatibility_date": "2025-01-01",
   "assets": {

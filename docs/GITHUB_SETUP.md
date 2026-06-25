@@ -1,6 +1,6 @@
 # GitHub Setup
 
-How to put Vault on GitHub and (optionally) wire up auto-deploy. Copy-paste
+How to put AirLock on GitHub and (optionally) wire up auto-deploy. Copy-paste
 friendly.
 
 ## 1. Create the repo
@@ -9,22 +9,22 @@ You can't have an AI create the repo for you — do it yourself, either way belo
 
 **With the GitHub CLI (`gh`):**
 ```bash
-cd vault-pdf-editor
-gh repo create vault-pdf-editor --public --source=. --remote=origin
+cd airlock-pdf-editor
+gh repo create airlock-pdf-editor --public --source=. --remote=origin
 ```
 
 **Or in the browser:** create a new empty repo at
 https://github.com/new (no README/license — this repo already has them), then:
 ```bash
-cd vault-pdf-editor
-git remote add origin https://github.com/<your-username>/vault-pdf-editor.git
+cd airlock-pdf-editor
+git remote add origin https://github.com/<your-username>/airlock-pdf-editor.git
 ```
 
 ## 2. Commit and push
 
 ```bash
 git add -A
-git commit -m "Vault: browser-only PDF editor with browser-enforced privacy"
+git commit -m "AirLock: browser-only PDF editor with browser-enforced privacy"
 git branch -M main
 git push -u origin main
 ```

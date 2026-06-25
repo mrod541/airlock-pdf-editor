@@ -37,7 +37,7 @@
                form-action 'none';
                base-uri 'none';
                object-src 'none';">
-<title>Vault — provably-local PDF editor</title>
+<title>AirLock — provably-local PDF editor</title>
 <style>:root {
   --bench:#23262b; --bench-2:#2b2f36; --paper:#f4f4f0; --ink:#16181c;
   --ink-soft:#7a828d; --line:#3a3f47; --signal:#3fa7a0; --signal-d:#2f8079;
@@ -163,7 +163,7 @@ header { display:flex; align-items:center; gap:18px; padding:12px 18px; backgrou
 
 <header>
   <div class="brand">
-    <h1>Vault</h1>
+    <h1>AirLock</h1>
     <span class="tag">provably local · browser-enforced</span>
   </div>
   <button class="verify-pill" id="open-verify">
@@ -206,7 +206,7 @@ header { display:flex; align-items:center; gap:18px; padding:12px 18px; backgrou
 </div>
 
 <div class="statusline">
-  <span>Vault</span>
+  <span>AirLock</span>
   <span class="mono" id="st-file">no document</span>
   <span class="mono" id="st-pages"></span>
   <div class="right">
@@ -325,7 +325,7 @@ header { display:flex; align-items:center; gap:18px; padding:12px 18px; backgrou
 
 <!-- ===== APP ===== -->
 <script>/* ============================================================================
-   Vault — provably-local PDF editor (app logic)
+   AirLock — provably-local PDF editor (app logic)
    ----------------------------------------------------------------------------
    PRIVACY INSTRUMENTATION FIRST. Before anything else runs, we wrap every API
    the page could use to send data out. Two things are true at once:
@@ -337,7 +337,7 @@ header { display:flex; align-items:center; gap:18px; padding:12px 18px; backgrou
 (function privacyInstrumentation() {
   let attempts = 0;
   const listeners = [];
-  window.__vault = {
+  window.__airlock = {
     get attempts() { return attempts; },
     onAttempt(fn) { listeners.push(fn); },
   };
@@ -345,7 +345,7 @@ header { display:flex; align-items:center; gap:18px; padding:12px 18px; backgrou
     attempts++;
     const detail = { kind, target: String(target), n: attempts };
     listeners.forEach(fn => { try { fn(detail); } catch {} });
-    console.warn('[Vault] blocked network attempt:', detail);
+    console.warn('[AirLock] blocked network attempt:', detail);
   }
 
   // fetch
@@ -429,7 +429,7 @@ function refreshStatus() { $('btn-save').disabled = !S.pdfBytes; $('btn-clear').
       $('csp-state').textContent = 'attempt blocked';
     }
   }
-  window.__vault.onAttempt(d => setCount(d.n));
+  window.__airlock.onAttempt(d => setCount(d.n));
 
   // "try to phone home" test button
   $('test-fetch').onclick = async () => {
@@ -586,7 +586,7 @@ PALETTE.forEach(c => { const s = document.createElement('div'); s.className = 's
 
 /* ===== OCR (only present in OCR builds; guarded) ===== */
 const ocrBtn = $('btn-ocr');
-if (ocrBtn && window.__VAULT_OCR_AVAILABLE) {
+if (ocrBtn && window.__AIRLOCK_OCR_AVAILABLE) {
   ocrBtn.onclick = async () => {
     if (!S.pdfjsDoc) { toast('Open a PDF first'); return; }
     const wraps = [...document.querySelectorAll('.page-wrap')];

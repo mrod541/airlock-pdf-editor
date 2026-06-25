@@ -57,7 +57,7 @@ work happens inside a Web Worker, not the main thread).
 **WASM core.** The Emscripten loader gates all `.wasm` fetching on its
 `wasmBinary` variable (`pa`). Its line `b.wasmBinary&&(pa=b.wasmBinary)` is
 patched to also seed `pa` from an inlined global
-`self.__VAULT_CORE_WASM__` (the `.wasm` bytes as base64). Every `.wasm`
+`self.__AIRLOCK_CORE_WASM__` (the `.wasm` bytes as base64). Every `.wasm`
 fetch/stream path is guarded by `!pa`/`pa||…`, so once `pa` is seeded **no
 network call loads the wasm**. The patched loader (core bytes embedded) is
 injected at the top of the worker source so `self.TesseractCore` is already
@@ -71,7 +71,7 @@ same-realm blob URL on the main thread, and passed as `workerPath`.
 decoded to bytes at runtime. The model is **not** handed to the worker as a
 `langPath` URL — a blob URL minted on the main thread is invalid inside the
 worker's realm, which made the worker fall back to a (CSP-blocked, then
-realm-broken) fetch. Instead, Vault intercepts the OCR worker's `postMessage`:
+realm-broken) fetch. Instead, AirLock intercepts the OCR worker's `postMessage`:
 when tesseract sends its `loadLanguage` message with `langs:"eng"`, the wrapper
 swaps in `[{code:'eng', data:<bytes>}]`. The worker then takes its
 "data supplied directly" branch (`a = e.data`) and writes the bytes to its own
@@ -150,8 +150,8 @@ grep -o "connect-src blob:" public/pdf-editor-lean.html
 grep -oiE "cdn\.[a-z]+|corePath|langPath|workerPath" public/pdf-editor-ocr-full.html
 
 # Are the OCR assets inlined? (ocr-full: model + worker + core all yes)
-#   tess-eng-data = model, tess-worker-src = worker, __VAULT_CORE_WASM__ = core
-grep -oiE "tess-eng-data|tess-worker-src|__VAULT_CORE_WASM__" public/pdf-editor-ocr-full.html
+#   tess-eng-data = model, tess-worker-src = worker, __AIRLOCK_CORE_WASM__ = core
+grep -oiE "tess-eng-data|tess-worker-src|__AIRLOCK_CORE_WASM__" public/pdf-editor-ocr-full.html
 
 # Verify published hashes:
 cd public && sha256sum -c SHA256SUMS.txt

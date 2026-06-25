@@ -1,6 +1,6 @@
-# Vault — Project Prompt
+# AirLock — Project Prompt
 
-This file defines what Vault **is** and the invariants that must never be
+This file defines what AirLock **is** and the invariants that must never be
 broken. Read it before changing anything — whether you're a human contributor or
 an AI assistant helping with this repo. If a proposed change violates an
 invariant below, it's wrong by definition, no matter how convenient.

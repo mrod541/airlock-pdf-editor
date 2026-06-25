@@ -1,6 +1,6 @@
 name: Deploy to Cloudflare
 
-# Deploys Vault to Cloudflare Workers on every push to main.
+# Deploys AirLock to Cloudflare Workers on every push to main.
 # Requires two repository secrets (Settings -> Secrets and variables -> Actions):
 #   CLOUDFLARE_API_TOKEN  — "Edit Cloudflare Workers" token
 #   CLOUDFLARE_ACCOUNT_ID — from your Workers dashboard

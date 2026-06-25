@@ -1,10 +1,10 @@
-# Vault — provable, browser-only PDF editing
+# AirLock — provable, browser-only PDF editing
 
 A PDF editor that runs **entirely in your browser** and makes a
 **browser-enforced** promise: your file never leaves your device. The value
 isn't features — it's *provable privacy*. You verify the claim; you don't trust it.
 
-**Live:** https://vault-pdf-editor.mozilla614.workers.dev
+**Live:** https://airlock-pdf-editor.mozilla614.workers.dev
 
 **New here? Read [`START_HERE.md`](START_HERE.md).**
 

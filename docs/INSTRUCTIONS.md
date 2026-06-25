@@ -1,10 +1,10 @@
-# Vault
+# AirLock
 
 A PDF editor that runs **entirely in your browser**, with a **browser-enforced**
 guarantee that your file never leaves your device. The value isn't features —
 it's *provable privacy*.
 
-Everything you need to use, deploy, verify, and rebuild Vault is below. Pick the
+Everything you need to use, deploy, verify, and rebuild AirLock is below. Pick the
 section you need.
 
 - [Using the editor](#using-the-editor)
@@ -137,7 +137,7 @@ npm run deploy
 ```
 
 Wrangler prints your live URL, e.g.
-`https://vault-pdf-editor.<your-subdomain>.workers.dev`.
+`https://airlock-pdf-editor.<your-subdomain>.workers.dev`.
 
 ### What the config does
 

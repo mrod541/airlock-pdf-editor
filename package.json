@@ -1,5 +1,5 @@
 {
-  "name": "vault-pdf-editor",
+  "name": "airlock-pdf-editor",
   "version": "1.0.0",
   "private": true,
   "description": "A browser-only PDF editor with a browser-enforced privacy guarantee: your PDF never leaves your device.",

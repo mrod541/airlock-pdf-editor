@@ -1,6 +1,6 @@
 # 🛡️ Start Here
 
-Welcome. This repo holds **Vault**, a PDF editor that runs entirely in your
+Welcome. This repo holds **AirLock**, a PDF editor that runs entirely in your
 browser and *cannot* send your file anywhere — a guarantee your browser
 enforces, not one you have to take on trust.
 
@@ -18,7 +18,7 @@ depending on who you are.
 ## I just want to use it
 
 Open a file from `public/` directly in your browser, or visit the deployed site
-at **https://vault-pdf-editor.mozilla614.workers.dev**:
+at **https://airlock-pdf-editor.mozilla614.workers.dev**:
 
 - **`pdf-editor-lean.html`** — everyday editing, smallest file, fully offline.
   **Start here.** ✅
@@ -76,7 +76,7 @@ compliant or not shipped — never papered over with a reassuring label.
 ## Repo map
 
 ```
-vault-pdf-editor/
+airlock-pdf-editor/
 ├── START_HERE.md              ← you are here
 ├── README.md                  project overview
 ├── wrangler.jsonc             Cloudflare Worker config

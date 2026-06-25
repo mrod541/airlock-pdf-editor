@@ -1,5 +1,5 @@
 /**
- * Vault — Cloudflare Worker
+ * AirLock — Cloudflare Worker
  *
  * This Worker does exactly two things:
  *   1. Serves the static editor files from ./public (via the [assets] binding).
