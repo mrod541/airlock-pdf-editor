@@ -100,8 +100,25 @@ header { display:flex; align-items:center; gap:18px; padding:12px 18px; backgrou
 .page-tools button { font-size:10px; padding:2px 7px; background:var(--bench-2); color:var(--paper); border:1px solid var(--line); border-radius:2px; cursor:pointer; font-family:inherit; }
 .page-tools button:hover { border-color:var(--ink-soft); }
 .page-tools button.del:hover { border-color:var(--warn); color:var(--warn); }
-.txt-edit { position:absolute; min-width:8px; background:transparent; border:1px dashed transparent; color:var(--ink); font-family:inherit; outline:none; padding:1px 2px; line-height:1.15; white-space:pre; z-index:5; }
-.txt-edit:focus,.txt-edit:hover { border-color:var(--signal); }
+/* text boxes: a positioned wrapper holding a textarea + drag grips */
+.txt-box { position:absolute; z-index:5; touch-action:none; }
+.txt-box .ta { display:block; box-sizing:content-box; background:transparent; border:1px dashed transparent; color:var(--ink); font-family:inherit; outline:none; padding:1px 2px; margin:0; resize:none; overflow:hidden; line-height:1.15; white-space:pre-wrap; word-break:break-word; }
+.txt-box.sel .ta { border-color:var(--signal); }
+.txt-box .ta:hover { border-color:var(--signal); }
+.txt-grip { position:absolute; background:var(--signal); opacity:0; transition:opacity .12s; z-index:6; touch-action:none; }
+.txt-box.sel .txt-grip { opacity:0.92; }
+.txt-grip.move { top:-9px; left:0; width:100%; height:7px; cursor:move; border-radius:4px; }
+.txt-grip.side { top:50%; right:-7px; width:8px; height:18px; transform:translateY(-50%); cursor:ew-resize; border-radius:3px; }
+.txt-grip.corner { bottom:-7px; right:-7px; width:12px; height:12px; cursor:nwse-resize; border-radius:3px; }
+/* floating per-box controls */
+.txt-float { position:absolute; z-index:7; display:flex; align-items:center; gap:6px; padding:5px 7px; background:var(--bench-2); border:1px solid var(--line); border-radius:var(--r); box-shadow:0 4px 16px var(--shadow); font-size:12px; }
+.txt-float select,.txt-float input { font-family:inherit; font-size:12px; background:var(--bench); color:var(--paper); border:1px solid var(--line); border-radius:4px; padding:3px 5px; }
+.txt-float input[type=number] { width:52px; }
+/* toolbar font controls (always-visible copy) */
+.font-ctl { display:inline-flex; align-items:center; gap:6px; }
+.font-ctl select,.font-ctl input { font-family:inherit; font-size:12px; background:var(--bench-2); color:var(--paper); border:1px solid var(--line); border-radius:4px; padding:5px 6px; }
+.font-ctl input[type=number] { width:54px; }
+.font-ctl.dim { opacity:0.4; }
 
 .statusline { position:fixed; bottom:0; left:0; right:0; display:flex; align-items:center; gap:16px; padding:7px 18px; background:var(--bench-2); border-top:1px solid var(--line); font-size:11px; color:var(--ink-soft); z-index:30; }
 .statusline .mono { color:var(--paper); }
@@ -186,6 +203,10 @@ header { display:flex; align-items:center; gap:18px; padding:12px 18px; backgrou
   
   <div class="sep"></div>
   <div class="swatches" id="swatches"></div>
+  <div class="font-ctl dim" id="font-ctl">
+    <select id="font-sel" title="Font for the selected text box"></select>
+    <input id="size-inp" type="number" min="6" max="200" step="1" value="16" title="Font size">
+  </div>
   <div class="sep"></div>
   <button class="tool primary" id="btn-save" disabled><svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg><span class="label">Save</span></button>
   <button class="tool" id="btn-clear" disabled><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg><span class="label">Discard</span></button>
@@ -517,6 +538,7 @@ function wireOverlay(overlay, wrap, anno, pageIndex) {
   const pos = e => { const r = overlay.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
   overlay.addEventListener('mousedown', e => {
     const p = pos(e);
+    deselectText();
     if (S.mode === 'text') { addText(wrap, pageIndex, p); return; }
     if (S.mode === 'draw') { drawing = true; stroke = { color: S.color, pts: [p] }; S.edits[pageIndex].strokes.push(stroke); }
     else if (S.mode === 'highlight' || S.mode === 'redact') { drawing = true; start = p; }
@@ -536,21 +558,167 @@ function wireOverlay(overlay, wrap, anno, pageIndex) {
     refreshStatus();
   });
 }
+/* ---- fonts: the three embed-free PDF Standard-14 faces (zero font bytes) ---- */
+const TEXT_FONTS = [
+  { id: 'Helvetica',  label: 'Helvetica', css: 'Helvetica, Arial, sans-serif' },
+  { id: 'TimesRoman', label: 'Times',     css: '"Times New Roman", Times, serif' },
+  { id: 'Courier',    label: 'Courier',   css: '"Courier New", Courier, monospace' },
+];
+const TXT_MIN = 6, TXT_MAX = 200;
+const fontById = id => TEXT_FONTS.find(f => f.id === id) || TEXT_FONTS[0];
+const clampSize = n => Math.max(TXT_MIN, Math.min(TXT_MAX, Math.round(+n || 16)));
+let selectedText = null; // { rec, el, ta, float, wrap, pageIndex }
+
 function addText(wrap, pageIndex, p) {
-  const rec = { x: p.x, y: p.y, size: 16, color: S.color, text: '' };
+  const rec = { x: p.x, y: p.y, w: null, size: 16, color: S.color, text: '', font: 'Helvetica' };
   S.edits[pageIndex].texts.push(rec);
-  const el = placeTextEl(wrap, pageIndex, rec);
-  requestAnimationFrame(() => { el.focus(); const sel = window.getSelection(), range = document.createRange(); range.selectNodeContents(el); range.collapse(true); sel.removeAllRanges(); sel.addRange(range); });
+  const box = placeTextEl(wrap, pageIndex, rec);
+  selectText(box);
+  requestAnimationFrame(() => box.ta.focus());
   refreshStatus();
 }
+
 function placeTextEl(wrap, pageIndex, rec) {
-  const el = document.createElement('div'); el.className = 'txt-edit'; el.contentEditable = true; el.textContent = rec.text;
-  el.style.left = rec.x + 'px'; el.style.top = rec.y + 'px'; el.style.fontSize = rec.size + 'px'; el.style.color = rec.color;
-  el.addEventListener('input', () => { rec.text = el.textContent; refreshStatus(); });
-  el.addEventListener('blur', () => { if (!el.textContent.trim()) { const arr = S.edits[pageIndex].texts, i = arr.indexOf(rec); if (i > -1) arr.splice(i, 1); el.remove(); refreshStatus(); } });
-  el.addEventListener('mousedown', e => { if (S.mode !== 'select') return; e.stopPropagation(); const r = wrap.getBoundingClientRect(); const move = ev => { rec.x = ev.clientX - r.left; rec.y = ev.clientY - r.top; el.style.left = rec.x + 'px'; el.style.top = rec.y + 'px'; }; const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); }; document.addEventListener('mousemove', move); document.addEventListener('mouseup', up); });
-  wrap.appendChild(el); return el;
+  if (rec.font == null) rec.font = 'Helvetica';
+  const box = document.createElement('div'); box.className = 'txt-box';
+  box.style.left = rec.x + 'px'; box.style.top = rec.y + 'px';
+
+  const ta = document.createElement('textarea');
+  ta.className = 'ta'; ta.value = rec.text; ta.rows = 1; ta.spellcheck = false;
+
+  const gMove = document.createElement('div'); gMove.className = 'txt-grip move';
+  const gSide = document.createElement('div'); gSide.className = 'txt-grip side';
+  const gCorner = document.createElement('div'); gCorner.className = 'txt-grip corner';
+  box.append(ta, gMove, gSide, gCorner);
+
+  const ref = { rec, el: box, ta, wrap, pageIndex, float: null };
+  box._ref = ref;
+
+  applyTextStyle(ref);
+  wrap.appendChild(box);
+  requestAnimationFrame(() => autosizeText(ref));
+
+  ta.addEventListener('input', () => { rec.text = ta.value; autosizeText(ref); refreshStatus(); });
+  ta.addEventListener('focus', () => selectText(box));
+  ta.addEventListener('blur', () => { if (!ta.value.trim()) removeText(ref); });
+  ta.addEventListener('keydown', e => { if (e.key === 'Escape') ta.blur(); });
+
+  gMove.addEventListener('mousedown', e => startTextDrag(e, ref, 'move'));
+  gSide.addEventListener('mousedown', e => startTextDrag(e, ref, 'width'));
+  gCorner.addEventListener('mousedown', e => startTextDrag(e, ref, 'font'));
+  // clicking the box background (not the textarea) also moves it
+  box.addEventListener('mousedown', e => { if (e.target === box) startTextDrag(e, ref, 'move'); });
+
+  return ref;
 }
+
+function applyTextStyle(ref) {
+  const f = fontById(ref.rec.font);
+  ref.ta.style.font = ref.rec.size + 'px/1.15 ' + f.css;
+  ref.ta.style.color = ref.rec.color;
+  autosizeText(ref);
+}
+function autosizeText(ref) {
+  const ta = ref.ta;
+  if (ref.rec.w == null) {
+    ta.style.whiteSpace = 'pre'; ta.style.width = 'auto';
+    ta.style.width = Math.max(ta.scrollWidth + 4, 16) + 'px';
+    ta.style.whiteSpace = 'pre-wrap';
+  } else {
+    ta.style.width = Math.max(28, ref.rec.w) + 'px';
+  }
+  ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px';
+  if (ref.float) positionFloat(ref);
+}
+function removeText(ref) {
+  const arr = S.edits[ref.pageIndex].texts, i = arr.indexOf(ref.rec);
+  if (i > -1) arr.splice(i, 1);
+  if (ref.float) ref.float.remove();
+  ref.el.remove();
+  if (selectedText === ref) { selectedText = null; syncToolbarFont(); }
+  refreshStatus();
+}
+
+/* selection + per-box floating controls */
+function selectText(box) {
+  const ref = box._ref;
+  document.querySelectorAll('.txt-box.sel').forEach(b => { if (b !== box) { b.classList.remove('sel'); if (b._ref && b._ref.float) { b._ref.float.remove(); b._ref.float = null; } } });
+  box.classList.add('sel');
+  selectedText = ref;
+  if (!ref.float) ref.float = buildFloat(ref);
+  positionFloat(ref);
+  syncToolbarFont();
+}
+function deselectText() {
+  if (!selectedText) return;
+  selectedText.el.classList.remove('sel');
+  if (selectedText.float) { selectedText.float.remove(); selectedText.float = null; }
+  selectedText = null;
+  syncToolbarFont();
+}
+function buildFloat(ref) {
+  const f = document.createElement('div'); f.className = 'txt-float';
+  const sel = document.createElement('select');
+  TEXT_FONTS.forEach(ft => { const o = document.createElement('option'); o.value = ft.id; o.textContent = ft.label; sel.appendChild(o); });
+  sel.value = ref.rec.font;
+  const size = document.createElement('input'); size.type = 'number'; size.min = TXT_MIN; size.max = TXT_MAX; size.value = ref.rec.size;
+  sel.addEventListener('change', () => { ref.rec.font = sel.value; applyTextStyle(ref); syncToolbarFont(); refreshStatus(); });
+  size.addEventListener('input', () => { ref.rec.size = clampSize(size.value); applyTextStyle(ref); syncToolbarFont(); refreshStatus(); });
+  f.append(sel, size);
+  f._sel = sel; f._size = size;
+  ref.wrap.appendChild(f);
+  return f;
+}
+function positionFloat(ref) {
+  if (!ref.float) return;
+  const top = ref.rec.y - 40;
+  ref.float.style.left = ref.rec.x + 'px';
+  ref.float.style.top = (top < 4 ? ref.rec.y + ref.ta.offsetHeight + 8 : top) + 'px';
+}
+
+/* one shared drag handler: move the box, scale the font, or set wrap width */
+function startTextDrag(e, ref, mode) {
+  e.preventDefault(); e.stopPropagation();
+  selectText(ref.el);
+  const r = ref.wrap.getBoundingClientRect();
+  const startX = e.clientX, startY = e.clientY;
+  const o = { x: ref.rec.x, y: ref.rec.y, size: ref.rec.size, w: ref.ta.offsetWidth };
+  const move = ev => {
+    const dx = ev.clientX - startX, dy = ev.clientY - startY;
+    if (mode === 'move') {
+      ref.rec.x = Math.max(0, Math.min(r.width, o.x + dx));
+      ref.rec.y = Math.max(0, Math.min(r.height, o.y + dy));
+      ref.el.style.left = ref.rec.x + 'px'; ref.el.style.top = ref.rec.y + 'px';
+      positionFloat(ref);
+    } else if (mode === 'font') {
+      ref.rec.size = clampSize(o.size + (dx + dy) / 2 * 0.25);
+      applyTextStyle(ref); syncToolbarFont();
+    } else if (mode === 'width') {
+      ref.rec.w = Math.max(28, o.w + dx);
+      autosizeText(ref);
+    }
+    refreshStatus();
+  };
+  const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
+  document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
+}
+
+/* toolbar font controls mirror the selected box */
+const fontCtl = $('font-ctl'), fontSel = $('font-sel'), sizeInp = $('size-inp');
+TEXT_FONTS.forEach(ft => { const o = document.createElement('option'); o.value = ft.id; o.textContent = ft.label; fontSel.appendChild(o); });
+function syncToolbarFont() {
+  if (selectedText) {
+    fontCtl.classList.remove('dim');
+    fontSel.value = selectedText.rec.font;
+    sizeInp.value = selectedText.rec.size;
+    if (selectedText.float) { selectedText.float._sel.value = selectedText.rec.font; selectedText.float._size.value = selectedText.rec.size; }
+  } else {
+    fontCtl.classList.add('dim');
+  }
+}
+fontSel.addEventListener('change', () => { if (!selectedText) return; selectedText.rec.font = fontSel.value; applyTextStyle(selectedText); syncToolbarFont(); refreshStatus(); });
+sizeInp.addEventListener('input', () => { if (!selectedText) return; selectedText.rec.size = clampSize(sizeInp.value); applyTextStyle(selectedText); syncToolbarFont(); refreshStatus(); });
+syncToolbarFont();
 
 /* ===== images ===== */
 let pendingImgPage = null;
@@ -578,8 +746,8 @@ function rotatePage(pageIndex) { pageRotation[pageIndex] = ((pageRotation[pageIn
 
 /* ===== modes ===== */
 function setActiveMode(btn) { document.querySelectorAll('.tool[data-mode]').forEach(b => b.classList.remove('active')); if (btn) btn.classList.add('active'); document.querySelectorAll('.page-wrap').forEach(w => w.dataset.tool = S.mode); }
-document.querySelectorAll('.tool[data-mode]').forEach(btn => { btn.onclick = () => { S.mode = btn.dataset.mode; setActiveMode(btn); updateHint(); }; });
-function updateHint() { const h = { select: 'Drag text boxes and images to reposition.', text: 'Click on a page to type.', draw: 'Click and drag to draw.', highlight: 'Drag a box to highlight.', redact: 'Drag a box to black it out — burned in on save.' }; $('hint').textContent = h[S.mode] || ''; }
+document.querySelectorAll('.tool[data-mode]').forEach(btn => { btn.onclick = () => { S.mode = btn.dataset.mode; if (S.mode !== 'text' && S.mode !== 'select') deselectText(); setActiveMode(btn); updateHint(); }; });
+function updateHint() { const h = { select: 'Drag text boxes and images to reposition.', text: 'Click to add text. Drag it to move, the corner to size, the side grip to set wrap width.', draw: 'Click and drag to draw.', highlight: 'Drag a box to highlight.', redact: 'Drag a box to black it out — burned in on save.' }; $('hint').textContent = h[S.mode] || ''; }
 setActiveMode(document.querySelector('[data-mode="select"]'));
 const swEl = $('swatches');
 PALETTE.forEach(c => { const s = document.createElement('div'); s.className = 'sw' + (c === S.color ? ' on' : ''); s.style.background = c; if (c === '#ffffff') s.style.boxShadow = 'inset 0 0 0 1px var(--line)'; s.onclick = () => { S.color = c; document.querySelectorAll('.sw').forEach(x => x.classList.remove('on')); s.classList.add('on'); }; swEl.appendChild(s); });
@@ -600,10 +768,12 @@ if (ocrBtn && window.__AIRLOCK_OCR_AVAILABLE) {
       const trimmed = (text || '').trim();
       if (!trimmed) { toast('No text recognized'); return; }
       const pageIndex = +target.dataset.page;
-      const rec = { x: 24, y: 24, size: 12, color: '#16181c', text: trimmed };
+      const rec = { x: 24, y: 24, w: Math.round((target.querySelector('canvas').width || 600) * 0.6), size: 12, color: '#16181c', text: trimmed, font: 'Helvetica' };
       S.edits[pageIndex].texts.push(rec);
-      const el = placeTextEl(target, pageIndex, rec);
-      el.style.maxWidth = '60%'; el.style.whiteSpace = 'pre-wrap'; el.style.background = 'rgba(244,244,240,0.92)'; el.style.padding = '6px 8px';
+      const box = placeTextEl(target, pageIndex, rec);
+      box.ta.style.background = 'rgba(244,244,240,0.92)';
+      autosizeText(box);
+      selectText(box.el);
       navigator.clipboard?.writeText(trimmed).then(() => toast('OCR text placed + copied'), () => toast('OCR text placed'));
       refreshStatus();
     } catch (err) { t.remove(); toast('OCR failed: ' + (err.message || err), { warn: true, ms: 5000 }); console.error(err); }
@@ -644,14 +814,47 @@ $('btn-save').onclick = async () => {
   const t = toast('Baking edits into a new PDF', { work: true, sticky: true });
   try {
     const doc = await PDFDocument.load(S.pdfBytes);
-    const font = await doc.embedFont(StandardFonts.Helvetica);
+    const fontCache = {};
+    const getFont = async id => {
+      if (!fontCache[id]) {
+        const std = id === 'TimesRoman' ? StandardFonts.TimesRoman
+                  : id === 'Courier'    ? StandardFonts.Courier
+                  :                        StandardFonts.Helvetica;
+        fontCache[id] = await doc.embedFont(std);
+      }
+      return fontCache[id];
+    };
+    // wrap text to a width (in PDF points) using the font's real glyph metrics
+    const layoutLines = (text, fnt, size, maxW) => {
+      const paras = text.split(/\r\n?|\n/);
+      if (maxW == null) return paras;
+      const out = [];
+      for (const para of paras) {
+        if (para === '') { out.push(''); continue; }
+        const toks = para.split(/(\s+)/); let line = '';
+        for (const tok of toks) {
+          const trial = line + tok;
+          if (fnt.widthOfTextAtSize(trial, size) > maxW && line.trim() !== '') { out.push(line.replace(/\s+$/, '')); line = tok.replace(/^\s+/, ''); }
+          else line = trial;
+        }
+        out.push(line.replace(/\s+$/, ''));
+      }
+      return out;
+    };
     const allPages = doc.getPages();
     for (const pageIndex of S.pageOrder) {
       const page = allPages[pageIndex]; const e = S.edits[pageIndex]; const { height } = page.getSize(); const k = 1 / S.scale;
       e.highlights.forEach(h => page.drawRectangle({ x: h.x * k, y: height - (h.y + h.h) * k, width: h.w * k, height: h.h * k, color: hexToRgb(h.color), opacity: 0.32 }));
       e.rects.forEach(r => page.drawRectangle({ x: r.x * k, y: height - (r.y + r.h) * k, width: r.w * k, height: r.h * k, color: rgb(0, 0, 0) }));
       e.strokes.forEach(s => { for (let i = 1; i < s.pts.length; i++) { const a = s.pts[i - 1], b = s.pts[i]; page.drawLine({ start: { x: a.x * k, y: height - a.y * k }, end: { x: b.x * k, y: height - b.y * k }, thickness: 1.6, color: hexToRgb(s.color) }); } });
-      e.texts.forEach(tx => { if (!tx.text.trim()) return; tx.text.split('\n').forEach((ln, li) => page.drawText(ln, { x: tx.x * k, y: height - (tx.y + tx.size) * k - li * tx.size * k * 1.15, size: tx.size * k, font, color: hexToRgb(tx.color) })); });
+      for (const tx of e.texts) {
+        if (!tx.text.trim()) continue;
+        const fnt = await getFont(tx.font || 'Helvetica');
+        const size = tx.size * k;
+        const maxW = (tx.w != null) ? tx.w * k : null;
+        const lines = layoutLines(tx.text, fnt, size, maxW);
+        lines.forEach((ln, li) => page.drawText(ln, { x: tx.x * k, y: height - (tx.y + tx.size) * k - li * size * 1.15, size, font: fnt, color: hexToRgb(tx.color) }));
+      }
       for (const im of e.images) { let emb; try { emb = im.type === 'image/png' ? await doc.embedPng(im.bytes) : await doc.embedJpg(im.bytes); } catch { continue; } page.drawImage(emb, { x: im.x * k, y: height - (im.y + im.h) * k, width: im.w * k, height: im.h * k }); }
       if (pageRotation[pageIndex]) { const cur = page.getRotation().angle || 0; page.setRotation(degrees((cur + pageRotation[pageIndex]) % 360)); }
     }
